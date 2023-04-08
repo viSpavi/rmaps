@@ -2,6 +2,7 @@ use speedy2d::color::Color;
 use speedy2d::dimen::Vec2;
 use speedy2d::Graphics2D;
 use speedy2d::shape::Rectangle;
+use speedy2d::window::MouseButton;
 
 const BACKGROUND_COLOR: Color = Color::from_rgb(116.0/255.0, 140.0/255.0, 171.0/255.0);
 
@@ -32,7 +33,7 @@ impl TopPanel {
         self.bounds.clone()
     }
 
-    pub fn handle_click(&mut self, position: Vec2, click_count: i32) {
+    pub fn handle_click(&mut self, position: Vec2, click_count: i32, button: MouseButton) {
         println!("clicked top panel at {:?}", position)
     }
 

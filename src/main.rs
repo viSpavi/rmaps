@@ -1,5 +1,6 @@
 mod structs;
 mod modules;
+mod types;
 
 use std::cell::RefCell;
 use std::fs::File;
@@ -26,15 +27,16 @@ use crate::modules::generic_node_container::GenericNodeContainer;
 use crate::modules::side_panel::SidePanel;
 use crate::modules::top_panel::TopPanel;
 use crate::structs::mouse_position::MousePosition;
+use crate::types::DoublePointerSafe;
 
 lazy_static! {
     static ref NODES: Arc<RwLock<Vec<Arc<RwLock<Node>>>>> = Arc::new(RwLock::new(Vec::new()));
     static ref LINKS: Arc<RwLock<Vec<Arc<RwLock<Link>>>>> = Arc::new(RwLock::new(Vec::new()));
     static ref MODULES: Arc<RwLock<Vec<Arc<RwLock<Box<dyn Module+Send+Sync>>>>>> = {
-        let mut modules: Vec<Arc<RwLock<Box<dyn Module+Send+Sync>>>> = Vec::new();
-
-        modules.push(Arc::new(RwLock::new(Box::new(GenericNodeContainer::new()))));
-        modules.push(Arc::new(RwLock::new(Box::new(DummyModule::new()))));
+        let mut modules: Vec<Arc<RwLock<Box<dyn Module+Send+Sync>>>> = vec![
+            Arc::new(RwLock::new(Box::new(GenericNodeContainer::new()))),
+            Arc::new(RwLock::new(Box::new(DummyModule::new())))
+        ];
 
         modules.iter_mut().for_each(|module| {
             module.write().unwrap().load();
@@ -42,7 +44,7 @@ lazy_static! {
         Arc::new(RwLock::new(modules))
     };
     //double pointer. The main one (first arc/rwlock) is the static one while we modify the second one by replacing it with pointers to other modules.
-    static ref ACTIVE_MODULE: Arc<RwLock<Arc<RwLock<Box<dyn Module+Send+Sync>>>>> = Arc::new(RwLock::new(MODULES.read().unwrap()[0].clone()));
+    static ref ACTIVE_MODULE: DoublePointerSafe<Box<dyn Module+Send+Sync>> = Arc::new(RwLock::new(MODULES.read().unwrap()[0].clone()));
 }
 
 fn main() {
@@ -134,8 +136,8 @@ impl WindowHandler for RMaps {
 
         graphics.clear_screen(Color::from_rgb(0.8, 0.9, 1.0));
 
-        let top_panel_height = window_size.1 * crate::modules::top_panel::DEFAULT_HEIGHT_RATIO;
-        let side_panel_width = window_size.0 * crate::modules::side_panel::DEFAULT_WIDTH_RATIO;
+        let top_panel_height = window_size.1 * top_panel::DEFAULT_HEIGHT_RATIO;
+        let side_panel_width = window_size.0 * side_panel::DEFAULT_WIDTH_RATIO;
 
         self.side_panel.draw((side_panel_width, window_size.1-top_panel_height), (0.0,top_panel_height), helper, graphics);
         self.top_panel.draw((window_size.0, top_panel_height), (0.0,0.0), graphics);
@@ -160,10 +162,10 @@ impl WindowHandler for RMaps {
 
         //check if mouse is contained in the side panel
         if self.side_panel.get_bounds().contains(self.mouse_position){
-            self.side_panel.handle_click(self.mouse_position, self.click_count);
+            self.side_panel.handle_click(self.mouse_position, self.click_count, button);
         }
         else if self.top_panel.get_bounds().contains(self.mouse_position){
-            self.top_panel.handle_click(self.mouse_position, self.click_count);
+            self.top_panel.handle_click(self.mouse_position, self.click_count, button);
         }
         else {
             ACTIVE_MODULE.read().unwrap().write().unwrap().handle_click(MousePosition::new(

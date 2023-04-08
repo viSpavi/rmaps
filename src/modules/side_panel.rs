@@ -1,16 +1,13 @@
-use std::cell::{Ref, RefCell};
-use std::collections::HashMap;
-use std::iter::Map;
-use std::rc::Rc;
 use std::sync::{Arc, RwLock};
 use speedy2d::color::Color;
-use speedy2d::dimen::{UVec2, Vec2};
+use speedy2d::dimen::Vec2;
 use speedy2d::font::{Font, TextAlignment, TextLayout, TextOptions};
 use speedy2d::Graphics2D;
 use speedy2d::shape::{Rect, Rectangle};
 use speedy2d::window::WindowHelper;
-use crate::{ACTIVE_MODULE, MODULES, RMaps};
 use crate::structs::module::Module;
+use speedy2d::window::MouseButton;
+use crate::{ACTIVE_MODULE, MODULES};
 
 pub const DEFAULT_WIDTH_RATIO: f32 = 0.20; //fixed width ratio over screen size
 const BORDER_LINES_WIDTH: f32 = 2.0;
@@ -76,7 +73,7 @@ impl SidePanel {
 
     }
 
-    pub fn handle_click(&mut self, position: Vec2, click_count: i32) {
+    pub fn handle_click(&mut self, position: Vec2, click_count: i32, button: MouseButton) {
         println!("click at {:?}", position);
         for (hitbox, module) in &self.hitboxes {
             if hitbox.contains(position) {
