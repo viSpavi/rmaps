@@ -1,3 +1,4 @@
+use std::cmp::min;
 use crate::modules::g_node_container::generic_node_editor::GenericNodeEditor;
 use crate::modules::g_node_container::key_bindings::*;
 use crate::structs::module::Module;
@@ -21,6 +22,8 @@ lazy_static! {
     pub static ref WRAPPED_NODE_COLOR: Color = Color::from_hex_rgb(0xE5E0FF);
     pub static ref WRAPPED_NODE_SELECTED_COLOR: Color = Color::from_hex_rgb(0x8EA7E9);
     static ref BACKGROUND_COLOR: Color = Color::from_hex_rgb(0xF0F0F0);
+    static ref SELECTION_RECTANGLE_COLOR: Color = Color::from_hex_rgb(0x8EA7E9);
+    static ref SELECTION_RECTANGLE_BORDER_COLOR: Color = Color::from_hex_rgb(0x8EA7E9);
 }
 
 const ZOOM_SPEED: f64 = 1.0/30.0;
@@ -39,12 +42,12 @@ pub struct GenericNodeContainer {
     original_viewport: Rect,
     pivot: Vec2,
     node_editor: Option<GenericNodeEditor>,
-    selected_nodes: Vec<Arc<RwLock<NodeWrapper>>>,
 
     //auxiliary stuff
     target_viewport: Rect,
     drag_vector: Option<(Vec2, Vec2)>, //(start, move_vector)
-    node_we_are_moving: Option<(Arc<RwLock<NodeWrapper>>, Vec2)>,
+    are_we_moving_nodes: Option<(Vec2, bool)>, //start, did_we_just_start_doing_that
+    selection_rectangle: Option<(Vec2, Vec2)>, //(start, end)
 }
 
 impl GenericNodeContainer {
@@ -56,10 +59,14 @@ impl GenericNodeContainer {
             target_viewport: Rect::from_tuples((0.0, 0.0), (0.0, 0.0)),
             pivot: Vec2::new(0.0, 0.0),
             node_editor: None,
-            selected_nodes: Vec::new(),
             drag_vector: None,
-            node_we_are_moving: None,
+            are_we_moving_nodes: None,
+            selection_rectangle: None,
         }
+    }
+
+    pub fn get_selected_nodes(&self) -> Vec<Arc<RwLock<NodeWrapper>>> {
+        self.wrapped_nodes.iter().filter(|wnode| wnode.read().unwrap().selected).map(|wnode| wnode.clone()).collect()
     }
 }
 
@@ -156,6 +163,12 @@ impl Module for GenericNodeContainer {
 
         //graphics.draw_circle(self.pivot, 5.0, Color::BLUE);
 
+        //draw selection rectangle
+        if let Some((start, end)) = self.selection_rectangle {
+            let rect = Rectangle::new(start, end);
+            graphics.draw_rectangle(&rect, *SELECTION_RECTANGLE_COLOR);
+        }
+
         for wrapped_node in &self.wrapped_nodes {
             wrapped_node
                 .write()
@@ -198,11 +211,14 @@ impl Module for GenericNodeContainer {
             MouseButton::Left => {
 
                 if collisions.is_empty() {
+                    //start selection rectangle
+                    self.selection_rectangle = Some((mouse_position.viewport(), mouse_position.viewport()));
+
                     self.node_editor = None;
                 }
 
-                if collisions.len() == 1 {
-                    self.node_we_are_moving = Some((collisions[0].clone(), mouse_position.viewport()));
+                else {
+                    self.are_we_moving_nodes = Some((mouse_position.viewport(), true));
                 }
 
                 match click_count {
@@ -260,10 +276,31 @@ impl Module for GenericNodeContainer {
         }
 
         if button == MouseButton::Left {
-            if let Some((wnode, _)) = &self.node_we_are_moving {
-                wnode.write().unwrap().merge_offset();
-                self.node_we_are_moving = None;
+
+            if let Some((start, end)) = self.selection_rectangle.take() {
+                for wrapped_node in &mut self.wrapped_nodes {
+
+                    let selection_rect = Rect::new(start, end);
+                    let top = f32::min(selection_rect.top(), selection_rect.bottom());
+                    let bottom = f32::max(selection_rect.top(), selection_rect.bottom());
+                    let left = f32::min(selection_rect.left(), selection_rect.right());
+                    let right = f32::max(selection_rect.left(), selection_rect.right());
+                    let selection_rect = Rect::new(Vec2::new(left, top), Vec2::new(right, bottom));
+
+
+                    let bounds = wrapped_node.write().unwrap().calculate_bounds(&self.original_viewport, &self.viewport);
+
+                    //check if bounds are contained in selection rect
+                    if selection_rect.contains(*bounds.top_left()) && selection_rect.contains(*bounds.bottom_right()) {
+                        wrapped_node.write().unwrap().selected = true;
+                    }
+                }
             }
+
+            for wnode in self.get_selected_nodes() {
+                wnode.write().unwrap().merge_offset();
+            }
+            self.are_we_moving_nodes = None;
         }
 
 
@@ -271,8 +308,29 @@ impl Module for GenericNodeContainer {
 
     fn handle_mouse_move(&mut self, position: MousePosition) {
 
-        if let Some((wnode, start)) = &self.node_we_are_moving {
-            wnode.write().unwrap().set_offset(position.viewport()-start);
+        if let Some((_, end)) = &mut self.selection_rectangle {
+            *end = position.viewport();
+        }
+
+        if let Some((start, didwe)) = self.are_we_moving_nodes {
+
+            if didwe {
+
+                //check collisions and select
+                let collisions: Vec<Arc<RwLock<NodeWrapper>>> = self.wrapped_nodes.iter_mut().filter(|wnode| {
+                    wnode.write().unwrap().calculate_bounds(&self.original_viewport, &self.viewport).contains(position.viewport())
+                }).map(|wnode| wnode.clone()).collect();
+
+                for wrapped_node in collisions {
+                    wrapped_node.write().unwrap().selected = true;
+                }
+
+                self.are_we_moving_nodes = Some((start, false));
+            }
+
+            for wrapped_node in self.get_selected_nodes() {
+                wrapped_node.write().unwrap().set_offset(position.viewport()-start);
+            }
         }
 
         if let Some((start, vector)) = self.drag_vector {

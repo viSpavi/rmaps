@@ -28,17 +28,17 @@ differently, then just change module. If you are missing a function that you wou
 for it to be created)
 I'm really skeptical about this project because of my mediocre programming skills and the ton of stuff that have to be
 implemented in order to make this project even resemble what I had in mind. 
-
+    
 
 ### Todo:
+- CTRL-A when editing text
 - patch up generic_node_container
-    - fix weird selection behaviour
     - fix weird colors
 - patch up side_panel
     - fix weird colors and layout in order to pretend it to be something cool and serious
 - add links to generic_node_container
 - design a tree structure to hold shortcuts
-    - figure out how to run shortcuts (closures?)
+    - figure out how to run shortcuts (closures?) 
 
 ### Roadmap
 - Create a somewhat "usable" mind mapping tool

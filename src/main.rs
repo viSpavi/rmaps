@@ -24,9 +24,6 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
-use std::ops::{Deref, Sub};
-use std::process::id;
-use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::{Duration, Instant, SystemTime};
@@ -137,7 +134,7 @@ impl Drop for RMaps {
 
 impl WindowHandler for RMaps {
 
-    fn on_resize(&mut self, helper: &mut WindowHelper<()>, size_pixels: UVec2) {
+    fn on_resize(&mut self, helper: &mut WindowHelper<()>, _size_pixels: UVec2) {
         helper.request_redraw();
     }
 
@@ -197,7 +194,7 @@ impl WindowHandler for RMaps {
         helper.request_redraw();
     }
 
-    fn on_mouse_move(&mut self, _helper: &mut WindowHelper<()>, position: Vec2) {
+    fn on_mouse_move(&mut self, helper: &mut WindowHelper<()>, position: Vec2) {
         self.mouse_position = position;
         self.last_left_click_up = SystemTime::UNIX_EPOCH;
         self.last_left_click_down = SystemTime::UNIX_EPOCH;
@@ -211,38 +208,6 @@ impl WindowHandler for RMaps {
             },
         ),);
 
-    }
-
-    fn on_mouse_button_up(&mut self, helper: &mut WindowHelper<()>, button: MouseButton) {
-        if self.last_left_click_up.elapsed().unwrap().as_millis() < 400 {
-            self.click_count_up += 1;
-        } else {
-            self.click_count_up = 1;
-        }
-
-        //check if mouse is contained in the side panel
-        if self.side_panel.get_bounds().contains(self.mouse_position) {
-            self.side_panel
-                .handle_click(self.mouse_position, self.click_count_up, button);
-        } else if self.top_panel.get_bounds().contains(self.mouse_position) {
-            self.top_panel
-                .handle_click(self.mouse_position, self.click_count_up, button);
-        } else {
-            ACTIVE_MODULE.read().unwrap().write().unwrap().handle_mouse_up(
-                MousePosition::new(
-                    self.mouse_position,
-                    self.mouse_position
-                        - Vector2 {
-                        x: self.side_panel.get_bounds().width(),
-                        y: self.top_panel.get_bounds().height(),
-                    },
-                ),
-                self.click_count_up,
-                button,
-            );
-        }
-
-        self.last_left_click_up = SystemTime::now();
     }
 
     fn on_mouse_button_down(&mut self, _helper: &mut WindowHelper<()>, button: MouseButton) {
@@ -278,6 +243,38 @@ impl WindowHandler for RMaps {
         self.last_left_click_down = SystemTime::now();
     }
 
+    fn on_mouse_button_up(&mut self, helper: &mut WindowHelper<()>, button: MouseButton) {
+        if self.last_left_click_up.elapsed().unwrap().as_millis() < 400 {
+            self.click_count_up += 1;
+        } else {
+            self.click_count_up = 1;
+        }
+
+        //check if mouse is contained in the side panel
+        if self.side_panel.get_bounds().contains(self.mouse_position) {
+            self.side_panel
+                .handle_click(self.mouse_position, self.click_count_up, button);
+        } else if self.top_panel.get_bounds().contains(self.mouse_position) {
+            self.top_panel
+                .handle_click(self.mouse_position, self.click_count_up, button);
+        } else {
+            ACTIVE_MODULE.read().unwrap().write().unwrap().handle_mouse_up(
+                MousePosition::new(
+                    self.mouse_position,
+                    self.mouse_position
+                        - Vector2 {
+                        x: self.side_panel.get_bounds().width(),
+                        y: self.top_panel.get_bounds().height(),
+                    },
+                ),
+                self.click_count_up,
+                button,
+            );
+        }
+
+        self.last_left_click_up = SystemTime::now();
+    }
+
     fn on_mouse_wheel_scroll(&mut self, _: &mut WindowHelper<()>, distance: MouseScrollDistance, ) {
         ACTIVE_MODULE.read().unwrap().write().unwrap().handle_drag(
             MousePosition::new(
@@ -292,10 +289,6 @@ impl WindowHandler for RMaps {
         );
     }
 
-    fn on_keyboard_char(&mut self, helper: &mut WindowHelper<()>, unicode_codepoint: char) {
-        ACTIVE_MODULE.read().unwrap().write().unwrap().handle_char(unicode_codepoint);
-    }
-
     fn on_key_down(&mut self, _helper: &mut WindowHelper<()>, virtual_key_code: Option<VirtualKeyCode>, scancode: KeyScancode, ) {
 
         ACTIVE_MODULE.read().unwrap().write().unwrap().handle_key_down(virtual_key_code, scancode);
@@ -303,6 +296,10 @@ impl WindowHandler for RMaps {
 
     fn on_key_up(&mut self, _helper: &mut WindowHelper<()>, virtual_key_code: Option<VirtualKeyCode>, _scancode: KeyScancode) {
         ACTIVE_MODULE.read().unwrap().write().unwrap().handle_key_up(virtual_key_code, _scancode);
+    }
+
+    fn on_keyboard_char(&mut self, helper: &mut WindowHelper<()>, unicode_codepoint: char) {
+        ACTIVE_MODULE.read().unwrap().write().unwrap().handle_char(unicode_codepoint);
     }
 
 }
