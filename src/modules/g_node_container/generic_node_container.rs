@@ -21,7 +21,7 @@ lazy_static! {
     pub static ref WRAPPED_NODE_BORDER_COLOR: Color = Color::from_hex_rgb(0x8EA7E9);
     pub static ref WRAPPED_NODE_COLOR: Color = Color::from_hex_rgb(0xE5E0FF);
     pub static ref WRAPPED_NODE_SELECTED_COLOR: Color = Color::from_hex_rgb(0x8EA7E9);
-    static ref BACKGROUND_COLOR: Color = Color::from_hex_rgb(0xF0F0F0);
+    static ref BACKGROUND_COLOR: Color = Color::from_hex_rgb(0xcad2c5);
     static ref SELECTION_RECTANGLE_COLOR: Color = Color::from_hex_rgb(0x8EA7E9);
     static ref SELECTION_RECTANGLE_BORDER_COLOR: Color = Color::from_hex_rgb(0x8EA7E9);
 }
@@ -161,7 +161,7 @@ impl Module for GenericNodeContainer {
         graphics.draw_line(self.viewport.bottom_right(), self.viewport.bottom_left(), 2.0, Color::BLACK);
         graphics.draw_line(self.viewport.bottom_left(), self.viewport.top_left(), 2.0, Color::BLACK);
 
-        //graphics.draw_circle(self.pivot, 5.0, Color::BLUE);
+        graphics.draw_circle(self.pivot, 5.0, Color::BLUE);
 
         //draw selection rectangle
         if let Some((start, end)) = self.selection_rectangle {
@@ -169,7 +169,15 @@ impl Module for GenericNodeContainer {
             graphics.draw_rectangle(&rect, *SELECTION_RECTANGLE_COLOR);
         }
 
+        //lerp nodes if we are dragging them around
+        /*if self.are_we_moving_nodes.is_some() {
+            self.wrapped_nodes.iter_mut().for_each(|wnode|
+                wnode.write().unwrap().merge_offset_lerp(0.01)
+            )
+        }*/
+
         for wrapped_node in &self.wrapped_nodes {
+
             wrapped_node
                 .write()
                 .unwrap()
@@ -181,8 +189,6 @@ impl Module for GenericNodeContainer {
         }
 
     }
-
-    fn open(&mut self) {}
 
     fn close(&mut self) {}
 
@@ -307,6 +313,8 @@ impl Module for GenericNodeContainer {
     }
 
     fn handle_mouse_move(&mut self, position: MousePosition) {
+
+        self.pivot = position.viewport();
 
         if let Some((_, end)) = &mut self.selection_rectangle {
             *end = position.viewport();

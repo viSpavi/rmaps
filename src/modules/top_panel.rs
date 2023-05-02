@@ -31,6 +31,6 @@ impl TopPanel {
     }
 
     pub fn handle_click(&mut self, position: Vec2, click_count: i32, button: MouseButton) {
-        println!("clicked top panel at {position:?}")
+        //println!("clicked top panel at {position:?}")
     }
 }

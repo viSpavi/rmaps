@@ -8,18 +8,27 @@ use std::fs::File;
 use std::iter::Map;
 
 pub trait Module {
-    fn load(&mut self);
-    fn unload(&mut self);
+
+    fn load(&mut self) {
+        println!("Module {} loaded", self.get_name());
+    }
+    fn unload(&mut self) {
+        println!("Module {} unloaded", self.get_name());
+    }
 
     fn get_name(&self) -> String;
 
     fn draw(&mut self, graphics: &mut Graphics2D, viewport: Rect, delta_time: f64);
 
-    fn open(&mut self);
-    fn close(&mut self);
+    fn open(&mut self) {}
+    fn close(&mut self) {}
 
-    fn get_active_key_bindings(&self) -> HashMap<Vec<VirtualKeyCode>, Box<dyn Fn()>>;
-    fn get_persistent_key_bindings(&self) -> HashMap<Vec<VirtualKeyCode>, Box<dyn Fn()>>;
+    fn get_active_key_bindings(&self) -> HashMap<Vec<VirtualKeyCode>, Box<dyn Fn()>> {
+        HashMap::new()
+    }
+    fn get_persistent_key_bindings(&self) -> HashMap<Vec<VirtualKeyCode>, Box<dyn Fn()>> {
+        HashMap::new()
+    }
 
     fn handle_mouse_down(&mut self, _position: MousePosition, _click_count: i32, _button: MouseButton) {
         // do nothing

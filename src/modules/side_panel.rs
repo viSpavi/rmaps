@@ -8,13 +8,17 @@ use speedy2d::window::MouseButton;
 use speedy2d::window::WindowHelper;
 use speedy2d::Graphics2D;
 use std::sync::{Arc, RwLock};
+use lazy_static::lazy_static;
+
+lazy_static!{
+    static ref BACKGROUND_COLOR: Color = Color::from_hex_rgb(0x2f3e46);
+}
 
 pub const DEFAULT_WIDTH_RATIO: f32 = 0.20; //fixed width ratio over screen size
 const BORDER_LINES_WIDTH: f32 = 2.0;
 const TEXT_H_PADDING_RATIO: f32 = 0.05;
 const TEXT_V_PADDING_RATIO: f32 = 0.01;
 const TEXT_V_SPACING_RATIO: f32 = 0.015;
-const BACKGROUND_COLOR: Color = Color::from_rgb(116.0 / 255.0, 140.0 / 255.0, 171.0 / 255.0);
 const BORDER_LINES_COLOR: Color = Color::BLACK;
 const TEXT_COLOR: Color = Color::BLACK;
 
@@ -45,7 +49,7 @@ impl SidePanel {
         self.bounds = Rectangle::from_tuples(offset, (size.0 + offset.0, size.1 + offset.1));
 
         let background = Rectangle::from_tuples(offset, (size.0 + offset.0, size.1 + offset.1));
-        graphics.draw_rectangle(&background, BACKGROUND_COLOR);
+        graphics.draw_rectangle(&background, *BACKGROUND_COLOR);
 
         //draw border lines
         graphics.draw_line(
@@ -113,7 +117,7 @@ impl SidePanel {
     }
 
     pub fn handle_click(&mut self, position: Vec2, click_count: i32, button: MouseButton) {
-        println!("click at {:?}", position);
+        //println!("click at {:?}", position);
         for (hitbox, module) in &self.hitboxes {
             if hitbox.contains(position) {
                 //I love this "write/unwrap" repetition lmao xD

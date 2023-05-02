@@ -50,6 +50,14 @@ impl NodeWrapper {
         self.offset = Vec2::ZERO;
     }
 
+    pub fn merge_offset_lerp(&mut self, lerp: f32) {
+        let delta = (self.offset-self.position)*lerp;
+        self.offset.x -= delta.x;
+        self.offset.y -= delta.y;
+        self.position.0 += delta.x;
+        self.position.1 += delta.y;
+    }
+
     pub fn toggle_selected(&mut self) {
         self.selected = !self.selected;
     }

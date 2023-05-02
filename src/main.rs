@@ -1,9 +1,10 @@
 mod modules;
 mod structs;
 mod types;
+mod utils;
 
 use crate::g_node_container::generic_node_container::GenericNodeContainer;
-use crate::modules::dummy::DummyModule;
+use crate::node_container::node_container::NodeContainer;
 use crate::modules::side_panel::SidePanel;
 use crate::modules::top_panel::TopPanel;
 use crate::modules::*;
@@ -16,17 +17,15 @@ use lazy_static::lazy_static;
 use speedy2d::color::Color;
 use speedy2d::dimen::{UVec2, Vec2, Vector2};
 use speedy2d::shape::{Rect, Rectangle};
-use speedy2d::window::{
-    KeyScancode, MouseButton, MouseScrollDistance, VirtualKeyCode, WindowHandler, WindowHelper,
-};
+use speedy2d::window::{KeyScancode, MouseButton, MouseScrollDistance, VirtualKeyCode, WindowCreationOptions, WindowHandler, WindowHelper, WindowPosition, WindowSize};
 use speedy2d::{Graphics2D, Window};
-use std::cell::RefCell;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::{Duration, Instant, SystemTime};
+use speedy2d::window::WindowSize::PhysicalPixels;
 
 lazy_static! {
     static ref NODES: Arc<RwLock<Vec<Arc<RwLock<Node>>>>> = Arc::new(RwLock::new(Vec::new()));
@@ -34,7 +33,7 @@ lazy_static! {
     static ref MODULES: Arc<RwLock<Vec<Arc<RwLock<Box<dyn Module+Send+Sync>>>>>> = {
         let mut modules: Vec<Arc<RwLock<Box<dyn Module+Send+Sync>>>> = vec![
             Arc::new(RwLock::new(Box::new(GenericNodeContainer::new()))),
-            Arc::new(RwLock::new(Box::new(DummyModule::new())))
+            Arc::new(RwLock::new(Box::new(NodeContainer::new()))),
         ];
 
         modules.iter_mut().for_each(|module| {
@@ -46,11 +45,14 @@ lazy_static! {
     static ref ACTIVE_MODULE: DoublePointerSafe<Box<dyn Module+Send+Sync>> = Arc::new(RwLock::new(MODULES.read().unwrap()[0].clone()));
 }
 
-static REFRESH_RATE: f64 = 165.0;
+static REFRESH_RATE: f64 = 165.0*2.0;
 
 fn main() {
 
-    let window = Window::new_centered("Speedy2D", (2560, 1600)).unwrap();
+    let window = Window::new_with_options(
+        "RMaps", WindowCreationOptions::new_windowed(WindowSize::PhysicalPixels(UVec2::new(1500, 1000)), Some(WindowPosition::Center)).with_vsync(false)).unwrap();
+
+    //new_centered("Speedy2D", (2560, 1600)).unwrap();
 
     //create data folder if it doesn't exist
     std::fs::create_dir_all("data").unwrap();
@@ -181,20 +183,23 @@ impl WindowHandler for RMaps {
         let elapsed = end.duration_since(start).as_millis() as f64;
         let wait_time = 1000.0 / REFRESH_RATE - elapsed;
         if wait_time > 0.0 {
-            std::thread::sleep(Duration::from_millis(wait_time as u64));
+            //std::thread::sleep(Duration::from_millis(wait_time as u64));
         }
         //print fps
-        //println!("fps: {}", 1000.0 / (elapsed + wait_time));
+        //println!("fps: {}", 1000.0 / (Instant::now().duration_since(start).as_millis() as f64));
 
         //save delta_time as seconds and print it formatted to 2 decimal places
         self.delta_time = (elapsed + wait_time)/1000.0;
-        //println!("delta_time: {}s", self.delta_time);
+        //println!("delta_time: {}s", delta_time);
 
 
         helper.request_redraw();
     }
 
     fn on_mouse_move(&mut self, helper: &mut WindowHelper<()>, position: Vec2) {
+
+        //println!("{:?}", position);
+
         self.mouse_position = position;
         self.last_left_click_up = SystemTime::UNIX_EPOCH;
         self.last_left_click_down = SystemTime::UNIX_EPOCH;
@@ -289,16 +294,18 @@ impl WindowHandler for RMaps {
         );
     }
 
-    fn on_key_down(&mut self, _helper: &mut WindowHelper<()>, virtual_key_code: Option<VirtualKeyCode>, scancode: KeyScancode, ) {
+    fn on_key_down(&mut self, _helper: &mut WindowHelper<()>, virtual_key_code: Option<VirtualKeyCode>, scancode: KeyScancode) {
 
         ACTIVE_MODULE.read().unwrap().write().unwrap().handle_key_down(virtual_key_code, scancode);
     }
 
     fn on_key_up(&mut self, _helper: &mut WindowHelper<()>, virtual_key_code: Option<VirtualKeyCode>, _scancode: KeyScancode) {
+
         ACTIVE_MODULE.read().unwrap().write().unwrap().handle_key_up(virtual_key_code, _scancode);
     }
 
     fn on_keyboard_char(&mut self, helper: &mut WindowHelper<()>, unicode_codepoint: char) {
+
         ACTIVE_MODULE.read().unwrap().write().unwrap().handle_char(unicode_codepoint);
     }
 
